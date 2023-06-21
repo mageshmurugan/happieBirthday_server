@@ -10,7 +10,7 @@ const session = require('express-session');
 const MongoStore = require("connect-mongo");
 const admin = require('firebase-admin');
 const jwt = require('jsonwebtoken');
-const serviceAccount=require('./serviceAccount.js');
+const serviceAccount=require('./serviceAccount.json');
 const cors = require('cors');
 const User = require('./models/user');
 const Dates= require('./models/dates');
@@ -47,7 +47,9 @@ const secret = process.env.SECRET;
 
 const store =MongoStore.create({
     mongoUrl: dbUrl,
-    secret
+    secret,
+    touchAfter: 24 * 60 * 60,
+    collection: 'session'
 });
 
 const sessionConfig = {
@@ -91,6 +93,10 @@ const authmail = nodemailer.createTransport({
         pass: pass
     }
 });
+
+app.get('/',(req,res)=>{
+    res.send('success')
+})
 
 
 app.post('/',protect, async (req, res) => {
