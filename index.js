@@ -1,148 +1,143 @@
-if (process.env.NODE_ENV !== 'production') {
-    require('dotenv').config();
+if (process.env.NODE_ENV !== "production") {
+  require("dotenv").config();
 }
 
-const express = require('express');
-const path = require('path');
-const mongoose = require('mongoose');
-const methodOverride = require('method-override')
-const session = require('express-session');
+const express = require("express");
+const path = require("path");
+const mongoose = require("mongoose");
+const methodOverride = require("method-override");
+const session = require("express-session");
 const MongoStore = require("connect-mongo");
-const admin = require('firebase-admin');
-const jwt = require('jsonwebtoken');
-const serviceAccount=require('./serviceAccount.json');
-const cors = require('cors');
-const User = require('./models/user');
-const Dates= require('./models/dates');
-const {protect} =require('./middleware')
-const nodemailer = require('nodemailer');
+const admin = require("firebase-admin");
+const jwt = require("jsonwebtoken");
+const serviceAccount = require("./serviceAccount.json");
+const cors = require("cors");
+const User = require("./models/user");
+const Dates = require("./models/dates");
+const { protect } = require("./middleware");
+const nodemailer = require("nodemailer");
 
-console.log(serviceAccount)
+console.log(serviceAccount);
 
 const app = express();
-app.use(express.urlencoded({ extended: true }))
+app.use(express.urlencoded({ extended: true }));
 
-const dbUrl = process.env.DB_URL
+const dbUrl = process.env.DB_URL;
 
 const connectDB = async () => {
-    try {
-      const conn = await mongoose.connect(dbUrl);
-      console.log(`Database Connected`);
-    } catch (error) {
-      console.log(error);
-      process.exit(1);
-    }
+  try {
+    const conn = await mongoose.connect(dbUrl);
+    console.log(`Database Connected`);
+  } catch (error) {
+    console.log(error);
+    process.exit(1);
   }
+};
 
+app.set("views", path.join(__dirname, "views"));
 
-
-app.set('views', path.join(__dirname, 'views'))
-  
 app.use(express.json());
 app.use(cors());
-app.use(methodOverride('_method'));
-app.use(express.static(path.join(__dirname, 'public'))) 
+app.use(methodOverride("_method"));
+app.use(express.static(path.join(__dirname, "public")));
 
 const secret = process.env.SECRET;
 
-const store =MongoStore.create({
-    mongoUrl: dbUrl,
-    secret,
-    touchAfter: 24 * 60 * 60,
-    collection: 'session'
+const store = MongoStore.create({
+  mongoUrl: dbUrl,
+  secret,
+  touchAfter: 24 * 60 * 60,
+  collection: "session",
 });
 
 const sessionConfig = {
-    store,
-    name: 'session',
-    secret,
-    resave: false,
-    saveUninitialized: true,
-    cookie: {
-        httpOnly: true,
-        // secure: true,
-        expires: Date.now() + 1000 * 60 * 60 * 24 * 7,
-        maxAge: 1000 * 60 * 60 * 24 * 7
-    }
-}
+  store,
+  name: "session",
+  secret,
+  resave: false,
+  saveUninitialized: true,
+  cookie: {
+    httpOnly: true,
+    // secure: true,
+    expires: Date.now() + 1000 * 60 * 60 * 24 * 7,
+    maxAge: 1000 * 60 * 60 * 24 * 7,
+  },
+};
 
 app.use(session(sessionConfig));
 
-
 admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
+  credential: admin.credential.cert(serviceAccount),
+});
 
 app.use((req, res, next) => {
-    res.locals.currentUser = req.user;
-   next();
-})
+  res.locals.currentUser = req.user;
+  next();
+});
 
-
-
-
-
-const pass = process.env.PASS
-
-
+const pass = process.env.PASS;
 
 const authmail = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: 'mageshmurugan64@gmail.com',
-        pass: pass
-    }
+  service: "gmail",
+  auth: {
+    user: "mageshmurugan64@gmail.com",
+    pass: pass,
+  },
 });
 
-app.get('/',(req,res)=>{
-    res.send('success')
-})
+app.get("/", (req, res) => {
+  res.send("success");
+});
 
-
-app.post('/',protect, async (req, res) => {
-  try{
-   const { names, email, date, nam } = req.body;
-   const m = date.split('-');
-   const sp = m[0]
-   const n = m.slice(1)
-   const tit = n.join('-');
-   // const ips = req.headers['x-forwarded-for'];
-   const ips = req.socket.remoteAddress;
-   const data = new Dates({ email: email, names: names, date: tit, year: sp, nam: nam ,ip:ips});
-   await data.save();
-   console.log(data)
-   return res.status(200).json({message:'Automated Email Successfully'});
-
-  }catch{
-   res.status(400).json({ message: 'Email automation failed' });
-
+app.post("/", protect, async (req, res) => {
+  try {
+    const { names, email, date, nam } = req.body;
+    const m = date.split("-");
+    const sp = m[0];
+    const n = m.slice(1);
+    const tit = n.join("-");
+    // const ips = req.headers['x-forwarded-for'];
+    const ips = req.socket.remoteAddress;
+    const data = new Dates({
+      email: email,
+      names: names,
+      date: tit,
+      year: sp,
+      nam: nam,
+      ip: ips,
+    });
+    await data.save();
+    console.log(data);
+    return res.status(200).json({ message: "Automated Email Successfully" });
+  } catch {
+    res.status(400).json({ message: "Email automation failed" });
   }
-   
-})
+});
 
-
-app.post('/email',async(req,res)=>{
-  const date = new Date()
-  const formatters = new Intl.DateTimeFormat('sv', { dateStyle: 'short', timeZone: 'Asia/Kolkata' })
-  const hell = formatters.format(date).split('-').slice(1).join('-');
+app.post("/email", async (req, res) => {
+  const date = new Date();
+  const formatters = new Intl.DateTimeFormat("sv", {
+    dateStyle: "short",
+    timeZone: "Asia/Kolkata",
+  });
+  const hell = formatters.format(date).split("-").slice(1).join("-");
 
   const findDate = await Dates.find({
-    date: hell
-});
-if (findDate) {
-  for (let datq of findDate) {
+    date: hell,
+  });
+  if (findDate) {
+    for (let datq of findDate) {
       // console.log(datq.nam)
 
-
-      const sendName = datq.email.split('@')
+      const sendName = datq.email.split("@");
       // console.log(sendName[0])
       const mailOptions = {
-          from: `${datq.nam} <mageshmurugan64@gmail.com>`,
-          to: `${sendName[0]} <${datq.email}>`,
-          subject: `Happie Birthday ${datq.names}`,
-          // text: `Wishing You the Best Birthday ${datq.names} `
+        from: `${datq.nam} <mageshmurugan64@gmail.com>`,
+        to: `${sendName[0]} <${datq.email}>`,
+        subject: `Happie Birthday ${datq.names}`,
+        // text: `Wishing You the Best Birthday ${datq.names} `
 
-          html: `<!DOCTYPE HTML
+        html: `<!DOCTYPE HTML
               PUBLIC "-//W3C//DTD XHTML 1.0 Transitional //EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
           <html xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml"
               xmlns:o="urn:schemas-microsoft-com:office:office">
@@ -458,7 +453,7 @@ if (findDate) {
                                                                       <div align="center"
                                                                           style="-webkit-tap-highlight-color: transparent;">
                                                                           <!--[if mso]><table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-spacing: 0; border-collapse: collapse; mso-table-lspace:0pt; mso-table-rspace:0pt;font-family:'Raleway',sans-serif;"><tr><td style="font-family:'Raleway',sans-serif;" align="center"><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="" style="height:54px; v-text-anchor:middle; width:300px;" arcsize="18.5%" strokecolor="#ffffff" strokeweight="2px" fillcolor="#e34c1e"><w:anchorlock/><center style="color:#FFF;font-family:'Raleway',sans-serif;"><![endif]-->
-                                                                          <a href="https://happieebirthday.netlify.app/"
+                                                                          <a href="https://happiebirthday.vercel.app/"
                                                                               target="_blank"
                                                                               style="box-sizing: border-box; -webkit-tap-highlight-color: transparent; display: inline-block;font-family:'Raleway',sans-serif;text-decoration: none;-webkit-text-size-adjust: none;text-align: center;color: #FFF; background-color: #e34c1e; border-radius: 10px;-webkit-border-radius: 10px; -moz-border-radius: 10px; width:auto; max-width:100%; overflow-wrap: break-word; word-break: break-word; word-wrap:break-word; mso-border-alt: none;border-top-color: #ffffff; border-top-style: solid; border-top-width: 2px; border-left-color: #ffffff; border-left-style: solid; border-left-width: 2px; border-right-color: #ffffff; border-right-style: solid; border-right-width: 2px; border-bottom-color: #ffffff; border-bottom-style: solid; border-bottom-width: 2px;">
                                                                               <span
@@ -620,89 +615,72 @@ if (findDate) {
 
           </body>
 
-          </html>`
-          
-
+          </html>`,
       };
 
-      await authmail.sendMail(mailOptions,
-          function (error, info) {
-              if (error) {
-                  console.log('ERROR')
-                  console.log(error);
-              } else {
-                  console.log('Email Sent :' + info.response);
-              }
-          });
-      
+      await authmail.sendMail(mailOptions, function (error, info) {
+        if (error) {
+          console.log("ERROR");
+          console.log(error);
+        } else {
+          console.log("Email Sent :" + info.response);
+        }
+      });
+    }
+    res.status(200).json({ message: "sended something" });
   }
-  res.status(200).json({message:'sended something'});
+  res.status(200).json({ message: "Nothing sended" });
+});
 
+app.post("/firebase", async (req, res) => {
+  const { phoneNumber } = req.body.user;
+  const { accessToken } = req.body.user.stsTokenManager;
 
-}
-res.status(200).json({message:'Nothing sended'});
-
-})
-
-
-
-
-
-
-
-
-app.post('/firebase',async(req,res)=>{
-    const  {phoneNumber}  = req.body.user;
-    const  {accessToken}  = req.body.user.stsTokenManager;
-    // const phoneNumber='+919345480054'
-    // const accessToken='eyJhbGciOiJSUzI1NiIsImtpZCI6IjY3YmFiYWFiYTEwNWFkZDZiM2ZiYjlmZjNmZjVmZTNkY2E0Y2VkYTEiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vZ2V0bWVhdC0yMDIzIiwiYXVkIjoiZ2V0bWVhdC0yMDIzIiwiYXV0aF90aW1lIjoxNjg3MDc3NTYzLCJ1c2VyX2lkIjoidmVuUXU2R0QxSFV5dmsyQVVtdENwbEFZRHE1MyIsInN1YiI6InZlblF1NkdEMUhVeXZrMkFVbXRDcGxBWURxNTMiLCJpYXQiOjE2ODcwNzc1NjMsImV4cCI6MTY4NzA4MTE2MywicGhvbmVfbnVtYmVyIjoiKzkxOTM0NTQ4MDA1NCIsImZpcmViYXNlIjp7ImlkZW50aXRpZXMiOnsicGhvbmUiOlsiKzkxOTM0NTQ4MDA1NCJdfSwic2lnbl9pbl9wcm92aWRlciI6InBob25lIn19.ev_uRdC1CtdHXPWyV5wCUKzLB0RXl3FUQV9VLAvqvqzYLs0beqLsfPVlX-xMIxG0e8fIAOMJ0nT3hJwRcVTFQIIz9Au8mB9unxe11wCCr4kg_bnzWcGfxAxZ56-VWj6xYI1roaQsTEOc_k80whxBZMDdibwIDgLAFaKi2XYXHC8VoDoh17Gxx4iyeaaqTnRyC1MJH4Pn_tJyBiIIwOFhozsvou4DprzSLn84oy8z0-fpTSI9Nq6r3S4cYxreMvbUa9eVmVWrrsT0OGtozBWbR01C2Y3OoB9-2hZJu6xwSRl_-Usw1HE_92QSmlOYbIppthH3ad9Op2fIeW_qNw3v2g';
-
-    admin
+  admin
     .auth()
     .verifyIdToken(accessToken)
-    .then(async(decodedToken) => {
-      console.log(decodedToken)
-      if(decodedToken.phone_number==phoneNumber){
-        const existNo=await User.findOne({
-            phone:decodedToken.phone_number
+    .then(async (decodedToken) => {
+      console.log(decodedToken);
+      if (decodedToken.phone_number == phoneNumber) {
+        const existNo = await User.findOne({
+          phone: decodedToken.phone_number,
         });
-        console.log(`exist......${existNo}`)
-        if(existNo){
+        console.log(`exist......${existNo}`);
+        if (existNo) {
+          const jwtAccess = jwt.sign(
+            { mobile: existNo.phone },
+            process.env.ACCESS_TOKEN_SECRET,
+            { expiresIn: "20d" }
+          );
+          const mobile = existNo.phone;
+          res.status(200).json({ jwtAccess, mobile });
+        } else {
+          const users = new User({
+            phone: decodedToken.phone_number,
+          });
+          await users.save();
 
-          const jwtAccess= jwt.sign({mobile:existNo.phone},process.env.ACCESS_TOKEN_SECRET,{expiresIn:'20d'});
-          const mobile= existNo.phone;
-          res.status(200).json({jwtAccess,mobile});
-        }else{
-            const users = new User({ 
-                phone:decodedToken.phone_number,
-                 });
-                await users.save();
-              
-                const jwtAccess= jwt.sign({mobile:users.phone},process.env.ACCESS_TOKEN_SECRET,{expiresIn:'20d'});
-                const mobile= users.phone;
-                
-                res.status(200).json({jwtAccess,mobile});
+          const jwtAccess = jwt.sign(
+            { mobile: users.phone },
+            process.env.ACCESS_TOKEN_SECRET,
+            { expiresIn: "20d" }
+          );
+          const mobile = users.phone;
+
+          res.status(200).json({ jwtAccess, mobile });
         }
-        
-        
       }
     })
     .catch((error) => {
-      console.error('Error verifying access token:', error);
-      res.status(400).json({ message: 'Token verification failed' });
+      console.error("Error verifying access token:", error);
+      res.status(400).json({ message: "Token verification failed" });
     });
-})
+});
 
-
-
-
-
-
-
-const port = process.env.PORT
+const port = process.env.PORT;
 
 connectDB().then(() => {
-    app.listen(port, () => {
-        console.log(`listening on port ${port}`);
-    })
-})
+  app.listen(port, () => {
+    console.log(`listening on port ${port}`);
+  });
+});
