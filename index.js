@@ -114,7 +114,7 @@ app.post("/", protect, async (req, res) => {
   }
 });
 
-app.post("/email", async (req, res) => {
+app.get("/email", async (req, res) => {
   const date = new Date();
   const formatters = new Intl.DateTimeFormat("sv", {
     dateStyle: "short",
